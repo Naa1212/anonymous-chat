@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Anonymous Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  body { font-family: Arial, sans-serif; background:#f4f6fb; margin:0; }
+  .container { max-width:720px; margin:auto; padding:16px; }
+  .card { background:#fff; border:1px solid #ddd; border-radius:14px; padding:14px; }
+  .hidden { display:none; }
+  h2 { margin: 8px 0 14px; }
+
+  #chat { background:#fff; border:1px solid #ccc; border-radius:14px; height:340px; overflow-y:auto; padding:10px; }
+  .msg { margin:6px 0; }
+  .me { text-align:right; color:#4a6cff; }
+  .other { text-align:left; color:#333; }
+
+  button { padding:10px; margin:6px 4px; width:45%; border-radius:12px; border:1px solid #ddd; background:#fff; }
+  button.primary { background:#4a6cff; color:#fff; border-color:#4a6cff; }
+  button.danger { background:#ffecec; border-color:#ffbcbc; }
+
+  img, video { max-width:100%; border-radius:12px; margin-top:6px; }
+  .muted { color:#666; font-size:12px; line-height:1.35; }
+  .row { text-align:center; }
+  a { color:#4a6cff; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  input[type="text"] { width:100%; padding:10px; margin-top:8px; border-radius:12px; border:1px solid #ddd; }
+  .pill { display:inline-block; padding:4px 10px; border:1px solid #ddd; border-radius:999px; font-size:12px; color:#333; background:#fff; margin-top:8px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Anonymous Chat</h2>
+
+  <!-- GATE -->
+  <div id="gate" class="card">
+    <b>Adults Only (18+)</b>
+    <p class="muted" style="margin-top:6px;">
+      This service is strictly for users aged 18 or older. By continuing, you confirm you are 18+ and you agree to the rules below.
+    </p>
+
+    <b>Strict Rules</b>
+    <ul class="muted">
+      <li><b>Illegal content is strictly prohibited</b> (anything forbidden by law).</li>
+      <li><b>No content involving minors</b> in any form (strictly prohibited).</li>
+      <li>No sexual exploitation, coercion, threats, violence, self-harm promotion, or harassment.</li>
+      <li>No hate speech, extremist/terrorist content, or incitement to violence.</li>
+      <li>No doxxing or sharing personal data (addresses, IDs, phone numbers, passwords, etc.).</li>
+      <li>No non-consensual intimate content.</li>
+      <li>This chat is for <b>friendly conversation</b>. Be respectful.</li>
+    </ul>
+
+    <p class="muted">
+      <b>Important:</b> photos and videos can be saved or screen-recorded by the receiver. We cannot prevent this.
+      If you see prohibited content, stop the chat and report the user.
+    </p>
+
+    <p class="muted">
+      By clicking <b>I Agree</b>, you accept our
+      <a href="/terms.html" target="_blank">Terms</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a>.
+      You are solely responsible for your actions and the content you share.
+    </p>
+
+    <div class="row">
+      <button class="primary" onclick="agree()">✅ I Agree</button>
+      <button class="danger" onclick="decline()">❌ Decline</button>
+    </div>
+
+    <p id="gateMsg" class="muted"></p>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <div id="chat"></div>
+
+    <div class="row" style="margin-top:10px;">
+      <button onclick="find()">Find</button>
+      <button onclick="next()">Next</button><br>
+      <button onclick="stop()">Stop</button>
+      <button onclick="report()">Report</button><br>
+      <button onclick="sendPhoto()">Photo</button>
+      <button onclick="sendVideo()">Video (≤10s)</button>
+    </div>
+
+    <input id="input" type="text" placeholder="Type a message…" />
+    <div class="pill">Media limit: ≤10s and ≤25MB</div>
+
+    <div class="muted" style="margin-top:8px;">
+      Friendly chat only. Prohibited content → Stop & Report.
+    </div>
+
+    <input type="file" id="photoInput" accept="image/*" hidden />
+    <input type="file" id="videoInput" accept="video/*" hidden />
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  const gate = document.getElementById("gate");
+  const app = document.getElementById("app");
+  const gateMsg = document.getElementById("gateMsg");
+
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("input");
+  const photoInput = document.getElementById("photoInput");
+  const videoInput = document.getElementById("videoInput");
+
+  const MAX_VIDEO_SECONDS = 10;
+  const MAX_MEDIA_MB = 25;
+  const MAX_MEDIA_BYTES = MAX_MEDIA_MB * 1024 * 1024;
+
+  function add(text, cls="") {
+    const d = document.createElement("div");
+    d.className = "msg " + cls;
+    d.innerText = text;
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function addImg(src) {
+    const img = document.createElement("img");
+    img.src = src;
+    chat.appendChild(img);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function addVideo(src) {
+    const v = document.createElement("video");
+    v.src = src;
+    v.controls = true;
+    v.playsInline = true;
+    chat.appendChild(v);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function showGate(on) {
+    if (on) {
+      gate.classList.remove("hidden");
+      app.classList.add("hidden");
+    } else {
+      gate.classList.add("hidden");
+      app.classList.remove("hidden");
+    }
+  }
+
+  function showGateMessage(t) { gateMsg.innerText = t || ""; }
+
+  // Always ask server: it will demand agree each session
+  socket.on("need_agree", () => {
+    showGate(true);
+    showGateMessage("");
+  });
+
+  socket.on("agreed_ok", () => {
+    showGate(false);
+    chat.innerHTML = "";
+    add("✅ Welcome! Press Find to start.");
+  });
+
+  socket.on("banned", () => {
+    showGate(true);
+    showGateMessage("🚫 Access blocked.");
+  });
+
+  function agree() {
+    socket.emit("agree");
+    showGateMessage("✅ Accepted. Loading…");
+  }
+
+  function decline() {
+    showGate(true);
+    showGateMessage("❌ You declined. Access is not available.");
+  }
+
+  // Controls
+  function find() { chat.innerHTML=""; add("Searching…"); socket.emit("find"); }
+  function next() { chat.innerHTML=""; socket.emit("next"); }
+  function stop() { socket.emit("stop"); add("Stopped"); }
+  function report() { socket.emit("report"); add("✅ Report sent."); }
+
+  socket.on("searching", () => add("Searching…"));
+  socket.on("matched", () => add("Connected! Say hi 👋"));
+  socket.on("partner_left", () => add("Partner left the chat."));
+  socket.on("stopped", () => add("Stopped"));
+  socket.on("report_received", () => add("✅ Report received."));
+  socket.on("reported_and_banned", () => add("⚠️ You were reported and removed."));
+
+  socket.on("message", (m) => add(m, "other"));
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && input.value.trim()) {
+      add(input.value, "me");
+      socket.emit("message", input.value);
+      input.value = "";
+    }
+  });
+
+  // PHOTO
+  function sendPhoto() { photoInput.value=""; photoInput.click(); }
+  photoInput.onchange = () => {
+    const file = photoInput.files[0];
+    if (!file) return;
+
+    if (file.size > MAX_MEDIA_BYTES) {
+      add(`❌ Photo too large. Max ${MAX_MEDIA_MB} MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => socket.emit("photo_offer", reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  socket.on("photo_request", () => {
+    if (confirm("Partner wants to send a photo. Accept?")) socket.emit("photo_accept");
+    else socket.emit("photo_decline");
+  });
+
+  socket.on("photo_receive", (dataUrl) => { add("📸 Photo received:"); addImg(dataUrl); });
+  socket.on("photo_sent", () => add("📤 Photo request sent. Waiting for confirmation…"));
+
+  // VIDEO
+  function sendVideo() { videoInput.value=""; videoInput.click(); }
+  videoInput.onchange = () => {
+    const file = videoInput.files[0];
+    if (!file) return;
+
+    if (file.size > MAX_MEDIA_BYTES) {
+      add(`❌ Video too large. Max ${MAX_MEDIA_MB} MB.`);
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const tempVideo = document.createElement("video");
+    tempVideo.preload = "metadata";
+    tempVideo.src = url;
+
+    tempVideo.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      const dur = tempVideo.duration;
+
+      if (!isFinite(dur) || dur <= 0) { add("❌ Could not read video duration."); return; }
+      if (dur > MAX_VIDEO_SECONDS + 0.2) { add(`❌ Video too long (${dur.toFixed(1)}s). Max ${MAX_VIDEO_SECONDS}s.`); return; }
+
+      const reader = new FileReader();
+      reader.onload = () => socket.emit("video_offer", reader.result);
+      reader.readAsDataURL(file);
+    };
+
+    tempVideo.onerror = () => { URL.revokeObjectURL(url); add("❌ Video format not supported."); };
+  };
+
+  socket.on("video_request", () => {
+    if (confirm("Partner wants to send a short video (≤10s). Accept?")) socket.emit("video_accept");
+    else socket.emit("video_decline");
+  });
+
+  socket.on("video_receive", (dataUrl) => { add("🎥 Video received:"); addVideo(dataUrl); });
+  socket.on("video_sent", () => add("📤 Video request sent. Waiting for confirmation…"));
+
+  // Start: server will push need_agree immediately
+  showGate(true);
+</script>
+</body>
+</html>
