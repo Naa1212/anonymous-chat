@@ -168,14 +168,14 @@ const pendingPhotos = new Map(); // key: receiverSocketId -> { fromSocketId, dat
 socket.on("photo_offer", (dataUrl) => {
   if (!requireAgree()) return;
 
-  const p = partners.get(socket.id);
-  if (!p) return;
+  const receiverId = partners.get(socket.id);
+  if (!receiverId) return;
 
   if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
 
-  pendingPhotos.set(p, { fromSocketId: socket.id, dataUrl });
-  io.to(p).emit("photo_request");
-  socket.emit("photo_sent");
+  pendingPhotos.set(receiverId, { fromSocketId: socket.id, dataUrl });
+  io.to(receiverId).emit("photo_request");
+  io.to(socket.id).emit("photo_sent");
 });
 
 socket.on("photo_accept", () => {
@@ -185,7 +185,12 @@ socket.on("photo_accept", () => {
   if (!req) return;
 
   pendingPhotos.delete(socket.id);
-  socket.emit("photo_deliver", req.dataUrl);
+
+  // deliver to receiver (this socket)
+  io.to(socket.id).emit("photo_deliver", { dataUrl: req.dataUrl });
+
+  // (optional) notify sender that it was accepted
+  io.to(req.fromSocketId).emit("message", "✅ Photo accepted");
 });
 
 socket.on("photo_decline", () => {
@@ -195,34 +200,54 @@ socket.on("photo_decline", () => {
   if (!req) return;
 
   pendingPhotos.delete(socket.id);
-  socket.emit("stopped");
+
+  // (optional) notify sender that it was declined
+  io.to(req.fromSocketId).emit("message", "❌ Photo declined");
 });
 
-// VIDEO
-const pendingVideos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
+// PHOTO
+const pendingPhotos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
 
-socket.on("video_offer", (dataUrl) => {
+socket.on("photo_offer", (dataUrl) => {
   if (!requireAgree()) return;
 
-  const p = partners.get(socket.id);
-  if (!p) return;
+  const receiverId = partners.get(socket.id);
+  if (!receiverId) return;
 
-  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:video/")) return;
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
 
-  pendingVideos.set(p, { fromSocketId: socket.id, dataUrl });
-  io.to(p).emit("video_request");
-  socket.emit("video_sent");
+  pendingPhotos.set(receiverId, { fromSocketId: socket.id, dataUrl });
+  io.to(receiverId).emit("photo_request");
+  io.to(socket.id).emit("photo_sent");
 });
 
-socket.on("video_accept", () => {
+socket.on("photo_accept", () => {
   if (!requireAgree()) return;
 
-  const req = pendingVideos.get(socket.id);
+  const req = pendingPhotos.get(socket.id);
   if (!req) return;
 
-  pendingVideos.delete(socket.id);
-  socket.emit("video_deliver", req.dataUrl);
+  pendingPhotos.delete(socket.id);
+
+  // deliver to receiver (this socket)
+  io.to(socket.id).emit("photo_deliver", { dataUrl: req.dataUrl });
+
+  // (optional) notify sender that it was accepted
+  io.to(req.fromSocketId).emit("message", "✅ Photo accepted");
 });
+
+socket.on("photo_decline", () => {
+  if (!requireAgree()) return;
+
+  const req = pendingPhotos.get(socket.id);
+  if (!req) return;
+
+  pendingPhotos.delete(socket.id);
+
+  // (optional) notify sender that it was declined
+  io.to(req.fromSocketId).emit("message", "❌ Photo declined");
+});
+
 
 socket.on("video_decline", () => {
   if (!requireAgree()) return;
