@@ -6,7 +6,6 @@
   <title>Oldneto — Simple Anonymous Chat</title>
   <style>
     :root{
-      /* slightly lighter overall background */
       --bg0:#101824;
       --bg1:#121e2b;
 
@@ -34,7 +33,6 @@
 
     *{box-sizing:border-box}
     html,body{height:100%}
-
     body{
       margin:0;
       height:100vh;
@@ -102,8 +100,6 @@
       font-weight:600;
     }
 
-    .status{opacity:0;user-select:none}
-
     .main{
       flex:1 1 auto;
       display:flex;
@@ -128,7 +124,6 @@
       padding:16px 16px 12px 16px;
       overflow:auto;
       min-height:0;
-      scroll-behavior:smooth;
     }
 
     .sys{
@@ -299,7 +294,7 @@
       border-color:rgba(120,180,255,.35);
       color:rgba(220,235,255,.95);
     }
-    #btnDecline{
+    #btnGateDecline{
       min-width:160px;
       background:rgba(255,120,120,.14);
       border-color:rgba(255,120,120,.32);
@@ -340,14 +335,6 @@
       font-size:13px;
       line-height:1.35;
     }
-    .incoming-preview{
-      margin-top:10px;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:16px;
-      overflow:hidden;
-      background:rgba(255,255,255,.04);
-    }
-    .incoming-preview img,.incoming-preview video{width:100%;display:block;background:black;}
     .incoming-actions{
       display:flex;
       gap:10px;
@@ -362,7 +349,7 @@
       border-color:rgba(120,180,255,.35);
       color:rgba(220,235,255,.95);
     }
-    #btnThisLine{
+    #btnDecline{
       min-width:160px;
       background:rgba(255,255,255,.10);
       border-color:rgba(255,255,255,.22);
@@ -403,7 +390,7 @@
       </div>
       <div class="gate-actions">
         <button id="btnAgree" type="button">I Agree</button>
-        <button id="btnDecline" type="button">Decline</button>
+        <button id="btnGateDecline" type="button">Decline</button>
       </div>
     </div>
   </div>
@@ -415,12 +402,11 @@
         <div class="ttl" style="opacity:.55;font-weight:900">Accept to view</div>
       </div>
       <div class="incoming-body">
-        <div id="incomingText">Your partner wants to send you media. Accept to receive it, or choose This line.</div>
-        <div class="incoming-preview" id="incomingPreview" style="display:none"></div>
+        <div id="incomingText">Your partner wants to send you media. Accept to receive it, or Decline.</div>
       </div>
       <div class="incoming-actions">
         <button id="btnAccept" type="button">Accept</button>
-        <button id="btnThisLine" type="button">This line</button>
+        <button id="btnDecline" type="button">Decline</button>
       </div>
     </div>
   </div>
@@ -435,7 +421,6 @@
             <small>simple anonymous chat</small>
           </div>
         </div>
-        <div class="status" id="status">online</div>
       </div>
 
       <div class="main">
@@ -457,7 +442,7 @@
 
           <div class="footer">
             <div class="media-note">
-              Media limits: photos accepted with confirmation; videos up to <strong>10 seconds</strong>, max <strong>40 MB</strong>.
+              Media limits: photos accepted with confirmation; videos up to <strong>15 seconds</strong>, max <strong>50 MB</strong>.
             </div>
             <div style="margin-top:6px">
               Friendly chat. If someone breaks the rules — use <strong>Stop</strong> and <strong>Report</strong>.
@@ -476,9 +461,9 @@
     const chat = document.getElementById("chat");
     const input = document.getElementById("msg");
 
-    const btnAgree = document.getElementById("btnAgree");
-    const btnDecline = document.getElementById("btnDecline");
     const gate = document.getElementById("gate");
+    const btnAgree = document.getElementById("btnAgree");
+    const btnGateDecline = document.getElementById("btnGateDecline");
 
     const btnFind  = document.getElementById("btnFind");
     const btnStop  = document.getElementById("btnStop");
@@ -492,9 +477,8 @@
     const incoming = document.getElementById("incoming");
     const incomingTitle = document.getElementById("incomingTitle");
     const incomingText = document.getElementById("incomingText");
-    const incomingPreview = document.getElementById("incomingPreview");
     const btnAccept = document.getElementById("btnAccept");
-    const btnThisLine = document.getElementById("btnThisLine");
+    const btnDecline = document.getElementById("btnDecline");
 
     const socket = io();
 
@@ -570,30 +554,75 @@
       btnVideo.disabled = !on;
     }
 
-    setControlsEnabled(false);
-
-    btnAgree.addEventListener("click", () => {
-      agreed = true;
-      gate.style.display = "none";
-      setControlsEnabled(true);
-      socket.emit("agree");
-      addSystem("Accepted. Loading…");
-    });
-
-    btnDecline.addEventListener("click", () => {
-      agreed = false;
-      addSystem("You declined. Access is not available.");
+    function showGate(){
+      gate.style.display = "flex";
       setControlsEnabled(false);
-    });
+    }
+    function hideGate(){
+      gate.style.display = "none";
+    }
 
     function requireAgree(){
       if(!agreed){
-        gate.style.display = "flex";
-        setControlsEnabled(false);
+        showGate();
         return false;
       }
       return true;
     }
+
+    function openIncoming(type){
+      pendingType = type;
+      waitingDelivery = false;
+
+      incomingTitle.textContent = type === "photo" ? "Incoming photo" : "Incoming video";
+      incomingText.textContent =
+        "Your partner wants to send you " + (type === "photo" ? "a photo" : "a video") + ". Accept to receive it, or Decline.";
+
+      btnAccept.disabled = false;
+      btnDecline.disabled = false;
+
+      incoming.style.display = "flex";
+    }
+
+    function closeIncoming(){
+      incoming.style.display = "none";
+      pendingType = null;
+      waitingDelivery = false;
+      btnAccept.disabled = false;
+      btnDecline.disabled = false;
+    }
+
+    // Initial state
+    showGate();
+
+    // Server can request agreement any time
+    socket.on("need_agree", () => {
+      agreed = false;
+      showGate();
+      addSystem("Please accept to continue.");
+    });
+
+    socket.on("agreed_ok", () => {
+      agreed = true;
+      hideGate();
+      setControlsEnabled(true);
+      addSystem("Accepted. Tap Find to start.");
+    });
+
+    btnAgree.addEventListener("click", () => {
+      // optimistic UI (instant)
+      agreed = true;
+      hideGate();
+      setControlsEnabled(true);
+      socket.emit("agree");
+      addSystem("Accepted. Tap Find to start.");
+    });
+
+    btnGateDecline.addEventListener("click", () => {
+      agreed = false;
+      showGate();
+      addSystem("You declined. Access is not available.");
+    });
 
     function find(){
       if(!requireAgree()) return;
@@ -684,8 +713,8 @@
       const file = videoInput.files && videoInput.files[0];
       if(!file) return;
 
-      const maxMB = 40;
-      const maxSeconds = 10;
+      const maxMB = 50;
+      const maxSeconds = 15;
 
       if(file.size > maxMB * 1024 * 1024){
         addSystem("Video too large.");
@@ -694,7 +723,7 @@
 
       const okDur = await validateVideoDuration(file, maxSeconds);
       if(!okDur){
-        addSystem("Video duration must be 10 seconds or less.");
+        addSystem("Video duration must be 15 seconds or less.");
         return;
       }
 
@@ -703,57 +732,31 @@
       addSystem("Video sent for confirmation…");
     });
 
-    function openIncoming(type){
-      pendingType = type;
-      waitingDelivery = false;
-
-      incomingTitle.textContent = type === "photo" ? "Incoming photo" : "Incoming video";
-      incomingText.textContent = "Your partner wants to send you " + (type === "photo" ? "a photo" : "a video") + ". Accept to receive it, or choose This line.";
-
-      incomingPreview.style.display = "none";
-      incomingPreview.innerHTML = "";
-
-      btnAccept.disabled = false;
-      btnThisLine.disabled = false;
-
-      incoming.style.display = "flex";
-    }
-
-    function closeIncoming(){
-      incoming.style.display = "none";
-      pendingType = null;
-      waitingDelivery = false;
-      incomingPreview.innerHTML = "";
-      incomingPreview.style.display = "none";
-      btnAccept.disabled = false;
-      btnThisLine.disabled = false;
-    }
-
     btnAccept.addEventListener("click", () => {
-  if(!requireAgree()) return;
-  if(!pendingType) return;
+      if(!requireAgree()) return;
+      if(!pendingType) return;
 
-  waitingDelivery = true;
+      waitingDelivery = true;
 
-  btnAccept.disabled = true;
-  btnThisLine.disabled = true;
+      btnAccept.disabled = true;
+      btnDecline.disabled = true;
 
-  incomingText.textContent = "Accepted. Receiving…";
+      incomingText.textContent = "Accepted. Receiving…";
 
-  if (pendingType === "photo") socket.emit("photo_accept");
-  if (pendingType === "video") socket.emit("video_accept");
+      if(pendingType === "photo") socket.emit("photo_accept");
+      if(pendingType === "video") socket.emit("video_accept");
 
-  setTimeout(() => {
-    if (waitingDelivery) {
-      waitingDelivery = false;
-      incomingText.textContent = "No response. Please try again.";
-      btnAccept.disabled = false;
-      btnThisLine.disabled = false;
-    }
-  }, 6000);
+      setTimeout(() => {
+        if (waitingDelivery) {
+          waitingDelivery = false;
+          incomingText.textContent = "No response. Please try again.";
+          btnAccept.disabled = false;
+          btnDecline.disabled = false;
+        }
+      }, 6000);
     });
 
-    btnThisLine.addEventListener("click", () => {
+    btnDecline.addEventListener("click", () => {
       if(!requireAgree()) return;
       if(!pendingType) return;
 
@@ -765,8 +768,8 @@
     });
 
     socket.on("banned", () => {
-      gate.style.display = "flex";
-      setControlsEnabled(false);
+      agreed = false;
+      showGate();
       addSystem("Access blocked.");
     });
 
@@ -775,7 +778,7 @@
     socket.on("partner_left", () => addSystem("Partner left the chat."));
     socket.on("stopped", () => addSystem("Stopped."));
     socket.on("report_received", () => addSystem("Report received."));
-    socket.on("reported_and_banned", () => addSystem("You were reported and removed."));
+    socket.on("reported_and_banned", () => addSystem("This user is temporarily blocked."));
 
     socket.on("message", (m) => addMessage(String(m || ""), "other"));
 
@@ -785,16 +788,13 @@
     socket.on("photo_request", () => openIncoming("photo"));
     socket.on("video_request", () => openIncoming("video"));
 
-    ffunction onDelivered(kind, payload){
-  addMedia(kind, payload, "other");
-
-  if (waitingDelivery) {
-    waitingDelivery = false;
-    closeIncoming();
-    btnAccept.disabled = false;
-    btnThisLine.disabled = false;
-   }
- }
+    function onDelivered(kind, payload){
+      addMedia(kind, payload, "other");
+      waitingDelivery = false;
+      closeIncoming();
+      btnAccept.disabled = false;
+      btnDecline.disabled = false;
+    }
 
     socket.on("photo_deliver", (payload) => onDelivered("photo", payload));
     socket.on("video_deliver", (payload) => onDelivered("video", payload));
@@ -804,4 +804,3 @@
   </script>
 </body>
 </html>
-
