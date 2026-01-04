@@ -730,16 +730,27 @@
     }
 
     btnAccept.addEventListener("click", () => {
-      if(!requireAgree()) return;
-      if(!pendingType) return;
+  if(!requireAgree()) return;
+  if(!pendingType) return;
 
-      waitingDelivery = true;
-      btnAccept.disabled = true;
-      btnThisLine.disabled = true;
-      incomingText.textContent = "Accepted. Receiving…";
+  waitingDelivery = true;
 
-      if(pendingType === "photo") socket.emit("photo_accept");
-      if(pendingType === "video") socket.emit("video_accept");
+  btnAccept.disabled = true;
+  btnThisLine.disabled = true;
+
+  incomingText.textContent = "Accepted. Receiving…";
+
+  if (pendingType === "photo") socket.emit("photo_accept");
+  if (pendingType === "video") socket.emit("video_accept");
+
+  setTimeout(() => {
+    if (waitingDelivery) {
+      waitingDelivery = false;
+      incomingText.textContent = "No response. Please try again.";
+      btnAccept.disabled = false;
+      btnThisLine.disabled = false;
+    }
+  }, 6000);
     });
 
     btnThisLine.addEventListener("click", () => {
@@ -774,10 +785,16 @@
     socket.on("photo_request", () => openIncoming("photo"));
     socket.on("video_request", () => openIncoming("video"));
 
-    function onDelivered(kind, payload){
-      addMedia(kind, payload, "other");
-      if(waitingDelivery) closeIncoming();
-    }
+    ffunction onDelivered(kind, payload){
+  addMedia(kind, payload, "other");
+
+  if (waitingDelivery) {
+    waitingDelivery = false;
+    closeIncoming();
+    btnAccept.disabled = false;
+    btnThisLine.disabled = false;
+   }
+ }
 
     socket.on("photo_deliver", (payload) => onDelivered("photo", payload));
     socket.on("video_deliver", (payload) => onDelivered("video", payload));
