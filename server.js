@@ -162,8 +162,6 @@ socket.on("report", () => {
   }
 });
 
-  // === REPLACE YOUR PHOTO + VIDEO SOCKET HANDLERS IN server.js WITH THIS BLOCK ===
-
 // PHOTO
 const pendingPhotos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
 
