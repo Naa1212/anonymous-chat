@@ -1,617 +1,459 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Anonymous Chat</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
-  :root{
-    --bg:#0b0f14;
-    --bg2:#0d131c;
-    --card:rgba(255,255,255,.045);
-    --card2:rgba(255,255,255,.03);
-    --border:rgba(255,255,255,.10);
-    --text:rgba(255,255,255,.92);
-    --muted:rgba(255,255,255,.62);
-    --muted2:rgba(255,255,255,.46);
-    --accent:#7aa7ff;
-    --accent2:#33d6a6;
-    --danger:#ff6b7a;
-    --shadow: 0 18px 70px rgba(0,0,0,.55);
-    --radius:18px;
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Oldneto</title>
 
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; }
-
-  body{
-    margin:0;
-    color:var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-    line-height:1.4;
-    background:
-      radial-gradient(900px 700px at 10% 0%, rgba(122,167,255,.18), transparent 62%),
-      radial-gradient(800px 650px at 90% 8%, rgba(51,214,166,.10), transparent 60%),
-      radial-gradient(900px 700px at 50% 95%, rgba(255,107,122,.10), transparent 60%),
-      linear-gradient(180deg, var(--bg), var(--bg2));
-    padding: 18px 14px 26px;
-  }
-
-  a{ color:var(--accent); text-decoration:none; }
-  a:hover{ text-decoration:underline; }
-
-  #chat{
-    max-width: 980px;
-    margin: 14px auto 0;
-    height: 58vh;
-    min-height: 360px;
-    max-height: 680px;
-    overflow:auto;
-    padding: 16px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: linear-gradient(180deg, var(--card), var(--card2));
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(10px);
-  }
-
-  #chat::-webkit-scrollbar{ width: 10px; }
-  #chat::-webkit-scrollbar-thumb{
-    background: rgba(255,255,255,.12);
-    border-radius: 999px;
-  }
-  #chat::-webkit-scrollbar-track{ background: transparent; }
-
-  .system{
-    text-align:center;
-    color:var(--muted);
-    font-size:12px;
-    margin: 10px 0;
-  }
-
-  .msg{ display:flex; margin: 10px 0; }
-  .msg.me{ justify-content:flex-end; }
-  .bubble{
-    max-width: 78%;
-    padding: 10px 12px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,.045);
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .msg.me .bubble{
-    background: rgba(122,167,255,.16);
-    border-color: rgba(122,167,255,.26);
-  }
-
-  input[type="text"], textarea{
-    max-width: 980px;
-    width: 100%;
-    display:block;
-    margin: 12px auto 0;
-    padding: 13px 14px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    background: rgba(0,0,0,.25);
-    color: var(--text);
-    outline:none;
-  }
-  input[type="text"]::placeholder, textarea::placeholder{ color: var(--muted2); }
-  input[type="text"]:focus, textarea:focus{
-    border-color: rgba(122,167,255,.55);
-    box-shadow: 0 0 0 3px rgba(122,167,255,.18);
-  }
-
-  button{
-    appearance:none;
-    border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.06);
-    color: var(--text);
-    padding: 12px 14px;
-    border-radius: 16px;
-    cursor:pointer;
-    font-weight: 650;
-    font-size: 14px;
-    letter-spacing:.2px;
-    transition: transform .08s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
-    user-select:none;
-    margin-top: 10px;
-    margin-right: 10px;
-  }
-  button:hover{
-    background: rgba(255,255,255,.09);
-    border-color: rgba(255,255,255,.18);
-  }
-  button:active{ transform: translateY(1px); }
-
-  button[onclick*="find"], button[onclick*="start"]{
-    background: rgba(122,167,255,.18);
-    border-color: rgba(122,167,255,.34);
-    box-shadow: 0 10px 30px rgba(122,167,255,.10);
-  }
-
-  button[onclick*="stop"]{
-    background: rgba(255,255,255,.05);
-    border-color: rgba(255,255,255,.14);
-  }
-
-  button[onclick*="report"]{
-    background: rgba(255,107,122,.14);
-    border-color: rgba(255,107,122,.26);
-    box-shadow: 0 10px 30px rgba(255,107,122,.08);
-  }
-
-  @media (max-width: 720px){
-    #chat{ height: 62vh; }
-    button{
-      width: 100%;
-      margin-right:0;
+  <style>
+    :root{
+      --bg0:#0b0f14;
+      --bg1:#0d131c;
+      --card0:rgba(255,255,255,.055);
+      --card1:rgba(255,255,255,.035);
+      --border:rgba(255,255,255,.12);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.62);
+      --muted2:rgba(255,255,255,.46);
+      --accent:#7aa7ff;
+      --accent2:#37d2a6;
+      --danger:#ff6b7a;
+      --shadow: 0 18px 70px rgba(0,0,0,.58);
+      --radius:18px;
     }
-  }
-</style>
 
-  :root{
-    --bg:#0b0f14;
-    --panel:#0f1722;
-    --panel2:#0c1420;
-    --border:rgba(255,255,255,.10);
-    --text:rgba(255,255,255,.92);
-    --muted:rgba(255,255,255,.65);
-    --muted2:rgba(255,255,255,.45);
-    --accent:#6ea8ff;
-    --danger:#ff5a6a;
-    --ok:#33d6a6;
-    --shadow: 0 16px 60px rgba(0,0,0,.55);
-    --radius:16px;
-  }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
 
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; }
-  body{
-    margin:0;
-    background:
-      radial-gradient(1200px 800px at 15% 0%, rgba(110,168,255,.18), transparent 60%),
-      radial-gradient(900px 700px at 85% 10%, rgba(51,214,166,.10), transparent 55%),
-      radial-gradient(900px 700px at 50% 90%, rgba(255,90,106,.10), transparent 55%),
-      var(--bg);
-    color:var(--text);
-    font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    -webkit-font-smoothing: antialiased;
-    line-height:1.35;
-  }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      line-height:1.45;
+      background:
+        radial-gradient(900px 700px at 10% 0%, rgba(122,167,255,.16), transparent 62%),
+        radial-gradient(800px 650px at 90% 8%, rgba(55,210,166,.10), transparent 60%),
+        radial-gradient(900px 700px at 50% 95%, rgba(255,107,122,.08), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
 
-  a{ color:var(--accent); text-decoration:none; }
-  a:hover{ text-decoration:underline; }
+    a{ color: var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
 
-  /* Center wrapper */
-  .wrap{
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 22px 16px 28px;
-  }
+    /* Centered app */
+    #app{
+      min-height: 100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 20px 14px 26px;
+    }
 
-  /* Top bar */
-  .topbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:14px;
-  }
-  .brand{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    user-select:none;
-  }
-  .brand .dot{
-    width:10px;height:10px;border-radius:50%;
-    background: var(--accent);
-    box-shadow: 0 0 18px rgba(110,168,255,.55);
-  }
-  .brand h1{
-    margin:0;
-    font-size:18px;
-    letter-spacing:.2px;
-    font-weight:700;
-  }
-  .brand small{
-    display:block;
-    margin-top:2px;
-    color:var(--muted2);
-    font-size:12px;
-    font-weight:500;
-  }
+    .shell{
+      width: min(980px, 92vw);
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
 
-  /* Main grid */
-  .grid{
-    display:grid;
-    grid-template-columns: 1.4fr .6fr;
-    gap:14px;
-  }
-  @media (max-width: 860px){
-    .grid{ grid-template-columns: 1fr; }
-  }
+    .topbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      user-select:none;
+    }
 
-  /* Panels */
-  .panel{
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow:hidden;
-  }
-  .panel .head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(255,255,255,.02);
-  }
-  .panel .head .title{
-    font-weight:700;
-    font-size:14px;
-    color:var(--text);
-  }
-  .panel .head .meta{
-    font-size:12px;
-    color:var(--muted2);
-  }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .brand .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(122,167,255,.55);
+    }
+    .brand h1{
+      margin:0;
+      font-size:16px;
+      font-weight:850;
+      letter-spacing:.3px;
+    }
+    .brand small{
+      display:block;
+      margin-top:2px;
+      color:var(--muted2);
+      font-size:12px;
+      font-weight:650;
+    }
 
-  /* Chat area */
-  .chat{
-    height: 58vh;
-    min-height: 360px;
-    max-height: 640px;
-    padding: 14px;
-    overflow:auto;
-    background: rgba(10,14,20,.35);
-  }
-  .msg{
-    display:flex;
-    margin: 10px 0;
-  }
-  .bubble{
-    max-width: 78%;
-    padding: 10px 12px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,.04);
-    color: var(--text);
-    word-wrap:break-word;
-    white-space: pre-wrap;
-  }
-  .msg.me{ justify-content:flex-end; }
-  .msg.me .bubble{
-    background: rgba(110,168,255,.14);
-    border-color: rgba(110,168,255,.25);
-  }
-  .msg.other .bubble{
-    background: rgba(255,255,255,.04);
-  }
-  .system{
-    text-align:center;
-    margin: 10px 0;
-    color: var(--muted);
-    font-size: 12px;
-  }
+    .status{
+      color:var(--muted2);
+      font-size:12px;
+      font-weight:650;
+      white-space:nowrap;
+    }
 
-  /* Composer */
-  .composer{
-    display:flex;
-    gap:10px;
-    padding: 12px;
-    border-top: 1px solid var(--border);
-    background: rgba(255,255,255,.02);
-  }
-  .composer input[type="text"]{
-    flex:1;
-    padding: 12px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: rgba(0,0,0,.25);
-    color: var(--text);
-    outline:none;
-  }
-  .composer input[type="text"]::placeholder{ color: var(--muted2); }
-  .composer input[type="text"]:focus{
-    border-color: rgba(110,168,255,.55);
-    box-shadow: 0 0 0 3px rgba(110,168,255,.18);
-  }
+    /* Main chat card */
+    .card{
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--card0), var(--card1));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
 
-  /* Buttons */
-  .btn{
-    appearance:none;
-    border:1px solid var(--border);
-    background: rgba(255,255,255,.05);
-    color: var(--text);
-    padding: 10px 12px;
-    border-radius: 12px;
-    cursor:pointer;
-    font-weight: 650;
-    font-size: 13px;
-    transition: transform .08s ease, background .2s ease, border-color .2s ease;
-    user-select:none;
-    white-space:nowrap;
-  }
-  .btn:hover{ background: rgba(255,255,255,.08); }
-  .btn:active{ transform: translateY(1px); }
-  .btn.primary{
-    background: rgba(110,168,255,.18);
-    border-color: rgba(110,168,255,.35);
-  }
-  .btn.danger{
-    background: rgba(255,90,106,.14);
-    border-color: rgba(255,90,106,.25);
-  }
-  .btn.ghost{
-    background: transparent;
-  }
+    .chatwrap{
+      padding: 14px;
+    }
 
-  /* Side panel controls */
-  .side{
-    padding: 12px;
-  }
-  .stack{ display:flex; flex-direction:column; gap:10px; }
-  .hint{
-    margin-top: 10px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,.03);
-    color: var(--muted);
-    font-size: 12px;
-  }
-  .hint b{ color: var(--text); }
+    #chat{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.16);
+      padding: 14px;
+      height: 56vh;
+      min-height: 360px;
+      max-height: 680px;
+      overflow:auto;
+    }
 
-  /* Gate / warnings (if your page has it) */
-  .gate{
-    border:1px solid var(--border);
-    background: rgba(255,255,255,.03);
-    border-radius: var(--radius);
-    padding: 14px;
-  }
-</style>
+    #chat::-webkit-scrollbar{ width: 10px; }
+    #chat::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.14);
+      border-radius: 999px;
+    }
+    #chat::-webkit-scrollbar-track{ background: transparent; }
 
+    .system{
+      text-align:center;
+      color:var(--muted);
+      font-size:12px;
+      margin: 10px 0;
+    }
+
+    .msg{ display:flex; margin: 10px 0; }
+    .msg.me{ justify-content:flex-end; }
+    .bubble{
+      max-width: 78%;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg.me .bubble{
+      background: rgba(122,167,255,.16);
+      border-color: rgba(122,167,255,.26);
+    }
+
+    .composer{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 10px;
+      padding: 12px 14px 14px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.02);
+      flex-wrap: wrap;
+    }
+
+    #msg{
+      flex: 1;
+      min-width: 260px;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline:none;
+    }
+    #msg::placeholder{ color: var(--muted2); }
+    #msg:focus{
+      border-color: rgba(122,167,255,.55);
+      box-shadow: 0 0 0 3px rgba(122,167,255,.18);
+    }
+
+    button{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 18px; /* puffy */
+      cursor:pointer;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing:.2px;
+      transition: transform .08s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    button:hover{
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.20);
+    }
+    button:active{ transform: translateY(1px); }
+
+    #btnFind{
+      background: rgba(122,167,255,.20);
+      border-color: rgba(122,167,255,.35);
+      box-shadow: 0 10px 30px rgba(122,167,255,.10);
+    }
+
+    #btnStop{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(255,255,255,.16);
+    }
+
+    #btnReport{
+      background: rgba(255,107,122,.14);
+      border-color: rgba(255,107,122,.26);
+      box-shadow: 0 10px 30px rgba(255,107,122,.08);
+    }
+
+    .footer{
+      text-align:center;
+      color: var(--muted2);
+      font-size: 12px;
+      padding: 8px 8px 0;
+    }
+
+    /* Gate */
+    #gate{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.66);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px 14px;
+    }
+
+    .gateCard{
+      width: min(720px, 94vw);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      padding: 16px 16px 14px;
+    }
+
+    .gateCard h2{
+      margin: 0 0 8px;
+      font-size: 16px;
+      letter-spacing:.2px;
+      font-weight: 900;
+    }
+
+    .gateCard p{
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .gateCard ul{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .gateCard li{ margin: 6px 0; }
+
+    .gateNote{
+      margin-top: 10px;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+
+    .gateActions{
+      display:flex;
+      gap: 10px;
+      justify-content:center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    #btnAgree{
+      background: rgba(122,167,255,.20);
+      border-color: rgba(122,167,255,.35);
+      box-shadow: 0 10px 30px rgba(122,167,255,.10);
+      min-width: 160px;
+    }
+
+    #btnDecline{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(255,255,255,.16);
+      min-width: 160px;
+    }
+
+    @media (max-width: 720px){
+      .shell{ width: min(980px, 96vw); }
+      #chat{ height: 60vh; }
+      #msg{ width: 100%; min-width: 0; }
+      button{ width: 100%; }
+    }
+  </style>
 </head>
 
 <body>
-<div class="container">
-  <h2>Anonymous Chat</h2>
-
-  <!-- GATE -->
-  <div id="gate" class="card">
-    <b>Adults Only (18+)</b>
-    <p class="muted" style="margin-top:6px;">
-      This service is strictly for users aged 18 or older. By continuing, you confirm you are 18+ and you agree to the rules below.
-    </p>
-
-    <b>Strict Rules</b>
-    <ul class="muted">
-      <li><b>Illegal content is strictly prohibited</b> (anything forbidden by law).</li>
-      <li><b>No content involving minors</b> in any form (strictly prohibited).</li>
-      <li>No sexual exploitation, coercion, threats, violence, self-harm promotion, or harassment.</li>
-      <li>No hate speech, extremist/terrorist content, or incitement to violence.</li>
-      <li>No doxxing or sharing personal data (addresses, IDs, phone numbers, passwords, etc.).</li>
-      <li>No non-consensual intimate content.</li>
-      <li>This chat is for <b>friendly conversation</b>. Be respectful.</li>
-    </ul>
-
-    <p class="muted">
-      <b>Important:</b> photos and videos can be saved or screen-recorded by the receiver. We cannot prevent this.
-      If you see prohibited content, stop the chat and report the user.
-    </p>
-
-    <p class="muted">
-      By clicking <b>I Agree</b>, you accept our
-      <a href="/terms.html" target="_blank">Terms</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a>.
-      You are solely responsible for your actions and the content you share.
-    </p>
-
-    <div class="row">
-      <button class="primary" onclick="agree()">✅ I Agree</button>
-      <button class="danger" onclick="decline()">❌ Decline</button>
+  <div id="gate">
+    <div class="gateCard">
+      <h2>18+ • Friendly chat only</h2>
+      <p>By clicking <b>I Agree</b>, you confirm you are 18+ and accept the <a href="/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+      <ul>
+        <li><b>Strictly prohibited:</b> illegal content, harm or threats, harassment, hate, extremist/terrorist content, violence, self-harm content, doxxing, scams, spam, malware links.</li>
+        <li><b>No minors:</b> any content involving minors is forbidden, including any sexual content, exploitation, or grooming.</li>
+        <li><b>No sexual exploitation:</b> non-consensual sexual content, coercion, or any form of exploitation is forbidden.</li>
+        <li><b>Report & block:</b> use <b>Report</b> for violations and <b>Stop</b> to leave at any time.</li>
+      </ul>
+      <div class="gateNote">You are responsible for what you share. We may restrict access for abuse. If you do not agree, you cannot use the chat.</div>
+      <div class="gateActions">
+        <button id="btnAgree" type="button">I Agree</button>
+        <button id="btnDecline" type="button">Decline</button>
+      </div>
     </div>
-
-    <p id="gateMsg" class="muted"></p>
   </div>
 
-  <!-- APP -->
-  <div id="app" class="hidden">
-    <div id="chat"></div>
+  <div id="app">
+    <div class="shell">
+      <div class="topbar">
+        <div class="brand">
+          <span class="dot"></span>
+          <div>
+            <h1>Oldneto</h1>
+            <small>simple anonymous chat</small>
+          </div>
+        </div>
+        <div class="status">online</div>
+      </div>
 
-    <div class="row" style="margin-top:10px;">
-      <button onclick="find()">Find</button>
-      <button onclick="stop()">Stop</button>
-      <button onclick="report()">Report</button><br>
-      <button onclick="sendPhoto()">Photo</button>
-      <button onclick="sendVideo()">Video (≤10s)</button>
+      <div class="card">
+        <div class="chatwrap">
+          <div id="chat"></div>
+        </div>
+
+        <div class="composer">
+          <input id="msg" type="text" placeholder="Type a message…" autocomplete="off" />
+          <button id="btnFind" type="button">Find</button>
+          <button id="btnStop" type="button">Stop</button>
+          <button id="btnReport" type="button">Report</button>
+        </div>
+      </div>
+
+      <div class="footer">Media limits: photos accepted with confirmation; videos up to 10 seconds, max 40 MB.</div>
     </div>
-
-    <input id="input" type="text" placeholder="Type a message…" />
-    <div class="pill">Media limit: ≤10s and ≤25MB</div>
-
-    <div class="muted" style="margin-top:8px;">
-      Friendly chat only. Prohibited content → Stop & Report.
-    </div>
-
-    <input type="file" id="photoInput" accept="image/*" hidden />
-    <input type="file" id="videoInput" accept="video/*" hidden />
   </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
-  const gate = document.getElementById("gate");
-  const app = document.getElementById("app");
-  const gateMsg = document.getElementById("gateMsg");
+    const gate = document.getElementById("gate");
+    const btnAgree = document.getElementById("btnAgree");
+    const btnDecline = document.getElementById("btnDecline");
 
-  const chat = document.getElementById("chat");
-  const input = document.getElementById("input");
-  const photoInput = document.getElementById("photoInput");
-  const videoInput = document.getElementById("videoInput");
+    const chat = document.getElementById("chat");
+    const msg = document.getElementById("msg");
 
-  const MAX_VIDEO_SECONDS = 10;
-  const MAX_MEDIA_MB = 25;
-  const MAX_MEDIA_BYTES = MAX_MEDIA_MB * 1024 * 1024;
+    const btnFind = document.getElementById("btnFind");
+    const btnStop = document.getElementById("btnStop");
+    const btnReport = document.getElementById("btnReport");
 
-  function add(text, cls="") {
-    const d = document.createElement("div");
-    d.className = "msg " + cls;
-    d.innerText = text;
-    chat.appendChild(d);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function addImg(src) {
-    const img = document.createElement("img");
-    img.src = src;
-    chat.appendChild(img);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function addVideo(src) {
-    const v = document.createElement("video");
-    v.src = src;
-    v.controls = true;
-    v.playsInline = true;
-    chat.appendChild(v);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function showGate(on) {
-    if (on) {
-      gate.classList.remove("hidden");
-      app.classList.add("hidden");
-    } else {
-      gate.classList.add("hidden");
-      app.classList.remove("hidden");
-    }
-  }
-
-  function showGateMessage(t) { gateMsg.innerText = t || ""; }
-
-  // Always ask server: it will demand agree each session
-  socket.on("need_agree", () => {
-    showGate(true);
-    showGateMessage("");
-  });
-
-  socket.on("agreed_ok", () => {
-    showGate(false);
-    chat.innerHTML = "";
-    add("✅ Welcome! Press Find to start.");
-  });
-
-  socket.on("banned", () => {
-    showGate(true);
-    showGateMessage("🚫 Access blocked.");
-  });
-
-  function agree() {
-    socket.emit("agree");
-    showGateMessage("✅ Accepted. Loading…");
-  }
-
-  function decline() {
-    showGate(true);
-    showGateMessage("❌ You declined. Access is not available.");
-  }
-
-  // Controls
-  function find() { chat.innerHTML=""; add("Searching…"); socket.emit("find"); }
-  function stop() { socket.emit("stop"); add("Stopped"); }
-  function report() { socket.emit("report"); add("✅ Report sent."); }
-
-  socket.on("searching", () => add("Searching…"));
-  socket.on("matched", () => add("Connected! Say hi 👋"));
-  socket.on("partner_left", () => add("Partner left the chat."));
-  socket.on("stopped", () => add("Stopped"));
-  socket.on("report_received", () => add("✅ Report received."));
-  socket.on("reported_and_banned", () => add("⚠️ You were reported and removed."));
-
-  socket.on("message", (m) => add(m, "other"));
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && input.value.trim()) {
-      add(input.value, "me");
-      socket.emit("message", input.value);
-      input.value = "";
-    }
-  });
-
-  // PHOTO
-  function sendPhoto() { photoInput.value=""; photoInput.click(); }
-  photoInput.onchange = () => {
-    const file = photoInput.files[0];
-    if (!file) return;
-
-    if (file.size > MAX_MEDIA_BYTES) {
-      add(`❌ Photo too large. Max ${MAX_MEDIA_MB} MB.`);
-      return;
+    function addSystem(text){
+      const div = document.createElement("div");
+      div.className = "system";
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => socket.emit("photo_offer", reader.result);
-    reader.readAsDataURL(file);
-  };
+    function addMsg(text, who){
+      const wrap = document.createElement("div");
+      wrap.className = "msg " + (who === "me" ? "me" : "other");
 
-  socket.on("photo_request", () => {
-    if (confirm("Partner wants to send a photo. Accept?")) socket.emit("photo_accept");
-    else socket.emit("photo_decline");
-  });
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
 
-  socket.on("photo_receive", (dataUrl) => { add("📸 Photo received:"); addImg(dataUrl); });
-  socket.on("photo_sent", () => add("📤 Photo request sent. Waiting for confirmation…"));
-
-  // VIDEO
-  function sendVideo() { videoInput.value=""; videoInput.click(); }
-  videoInput.onchange = () => {
-    const file = videoInput.files[0];
-    if (!file) return;
-
-    if (file.size > MAX_MEDIA_BYTES) {
-      add(`❌ Video too large. Max ${MAX_MEDIA_MB} MB.`);
-      return;
+      wrap.appendChild(bubble);
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
     }
 
-    const url = URL.createObjectURL(file);
-    const tempVideo = document.createElement("video");
-    tempVideo.preload = "metadata";
-    tempVideo.src = url;
+    let agreed = false;
 
-    tempVideo.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      const dur = tempVideo.duration;
+    btnAgree.addEventListener("click", () => {
+      agreed = true;
+      gate.style.display = "none";
+      socket.emit("agree");
+      addSystem("Ready. Tap Find to start.");
+      msg.focus();
+    });
 
-      if (!isFinite(dur) || dur <= 0) { add("❌ Could not read video duration."); return; }
-      if (dur > MAX_VIDEO_SECONDS + 0.2) { add(`❌ Video too long (${dur.toFixed(1)}s). Max ${MAX_VIDEO_SECONDS}s.`); return; }
+    btnDecline.addEventListener("click", () => {
+      agreed = false;
+      addSystem("You must agree to continue.");
+    });
 
-      const reader = new FileReader();
-      reader.onload = () => socket.emit("video_offer", reader.result);
-      reader.readAsDataURL(file);
-    };
+    function requireAgree(){
+      if (!agreed){
+        addSystem("Please agree to continue.");
+        return false;
+      }
+      return true;
+    }
 
-    tempVideo.onerror = () => { URL.revokeObjectURL(url); add("❌ Video format not supported."); };
-  };
+    btnFind.addEventListener("click", () => {
+      if (!requireAgree()) return;
+      chat.innerHTML = "";
+      addSystem("Searching…");
+      socket.emit("find");
+    });
 
-  socket.on("video_request", () => {
-    if (confirm("Partner wants to send a short video (≤10s). Accept?")) socket.emit("video_accept");
-    else socket.emit("video_decline");
-  });
+    btnStop.addEventListener("click", () => {
+      if (!requireAgree()) return;
+      socket.emit("stop");
+      addSystem("Stopped.");
+    });
 
-  socket.on("video_receive", (dataUrl) => { add("🎥 Video received:"); addVideo(dataUrl); });
-  socket.on("video_sent", () => add("📤 Video request sent. Waiting for confirmation…"));
+    btnReport.addEventListener("click", () => {
+      if (!requireAgree()) return;
+      socket.emit("report");
+      addSystem("Report sent.");
+    });
 
-  // Start: server will push need_agree immediately
-  showGate(true);
-</script>
+    msg.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const text = msg.value.trim();
+      if (!text) return;
+      if (!requireAgree()) return;
+      socket.emit("msg", text);
+      addMsg(text, "me");
+      msg.value = "";
+    });
+
+    socket.on("system", (t) => addSystem(String(t || "")));
+    socket.on("msg", (t) => addMsg(String(t || ""), "other"));
+
+    socket.on("paired", () => {
+      chat.innerHTML = "";
+      addSystem("Connected.");
+    });
+
+    socket.on("stopped", () => addSystem("Chat ended."));
+    socket.on("banned", () => {
+      gate.style.display = "flex";
+      addSystem("Access blocked.");
+    });
+  </script>
 </body>
 </html>
