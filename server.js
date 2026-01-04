@@ -6,46 +6,67 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 30 * 1024 * 1024, // 30MB buffer (safe for 20–25MB uploads)
+  maxHttpBufferSize: 50 * 1024 * 1024, // 50MB buffer
 });
 
 app.use(express.static("public"));
 
-// LIVE CHAT STATE
+// ===== LIVE CHAT STATE =====
 let queue = [];
-let partners = new Map();
-let identBySocket = new Map();
+const partners = new Map();        // socketId -> socketId
+const identBySocket = new Map();   // socketId -> ident
 
-// Pending media (RAM only)
-let pendingPhotos = new Map(); // receiverSocketId -> { fromSocketId, dataUrl }
-let pendingVideos = new Map(); // receiverSocketId -> { fromSocketId, dataUrl }
-
-// Bans (MVP memory only; if you want persistent bans, tell me and I’ll add data.json back)
-let bannedIdents = new Set();
-
-function pair(a, b) {
-  partners.set(a, b);
-  partners.set(b, a);
+// ===== Agreement =====
+function isAgreed(socket) {
+  return socket.data.agreed === true;
 }
 
-function unpair(a) {
-  const b = partners.get(a);
-  if (b) partners.delete(b);
-  partners.delete(a);
-}
-
+// ===== Ident =====
 function getIP(socket) {
   return socket.handshake.address || "unknown";
 }
-
 function makeIdent(socket) {
   const ip = getIP(socket);
   const ua = (socket.handshake.headers["user-agent"] || "").slice(0, 160);
   return `${ip}::${ua}`;
 }
 
-function isAgreed(socket) {
-  return socket.data.agreed === true;
+// ===== Pairing =====
+function pair(a, b) {
+  partners.set(a, b);
+  partners.set(b, a);
+}
+function unpair(a) {
+  const b = partners.get(a);
+  if (b) partners.delete(b);
+  partners.delete(a);
+}
+
+// ===== Moderation: report threshold ban =====
+const REPORT_THRESHOLD = 10;
+const BAN_MS = 24 * 60 * 60 * 1000; // 24h
+
+// targetIdent -> Set of reporterIdents
+const reportVotes = new Map();
+
+// ident -> banUntil timestamp
+const tempBans = new Map();
+
+function isTemporarilyBanned(ident) {
+  const until = tempBans.get(ident) || 0;
+  if (Date.now() < until) return true;
+  if (until) tempBans.delete(ident); // cleanup expired
+  return false;
+}
+
+// ===== Pending media (receiverSocketId -> { fromSocketId, dataUrl }) =====
+const pendingPhotos = new Map();
+const pendingVideos = new Map();
+
+// helper
+function emitTo(id, event, payload) {
+  if (!id) return;
+  io.to(id).emit(event, payload);
 }
 
 io.on("connection", (socket) => {
@@ -54,13 +75,14 @@ io.on("connection", (socket) => {
 
   console.log("CONNECTED", socket.id);
 
-  if (bannedIdents.has(ident)) {
+  // ban check
+  if (isTemporarilyBanned(ident)) {
     socket.emit("banned");
     socket.disconnect(true);
     return;
   }
 
-  // Always require agreement each session
+  // require agreement every session
   socket.data.agreed = false;
   socket.emit("need_agree");
 
@@ -77,54 +99,44 @@ io.on("connection", (socket) => {
     return true;
   }
 
-  // FIND
+  // ===== FIND =====
   socket.on("find", () => {
     if (!requireAgree()) return;
-    if (partners.has(socket.id) || queue.includes(socket.id)) return;
+    if (partners.has(socket.id)) return;
+    if (queue.includes(socket.id)) return;
 
+    // try match
     while (queue.length) {
       const other = queue.shift();
-      if (other !== socket.id && !partners.has(other)) {
-        pair(socket.id, other);
-        socket.emit("matched");
-        io.to(other).emit("matched");
-        return;
-      }
+      if (!other) continue;
+      if (other === socket.id) continue;
+      if (partners.has(other)) continue;
+
+      pair(socket.id, other);
+      socket.emit("matched");
+      emitTo(other, "matched");
+      return;
     }
+
     queue.push(socket.id);
     socket.emit("searching");
   });
 
-  // NEXT
-  socket.on("next", () => {
-    if (!requireAgree()) return;
-
-    const p = partners.get(socket.id);
-    if (p) {
-      unpair(socket.id);
-      io.to(p).emit("partner_left");
-    }
-    queue = queue.filter((id) => id !== socket.id);
-
-    socket.emit("searching");
-    socket.emit("find");
-  });
-
-  // STOP
+  // ===== STOP =====
   socket.on("stop", () => {
     if (!requireAgree()) return;
 
     const p = partners.get(socket.id);
     if (p) {
       unpair(socket.id);
-      io.to(p).emit("partner_left");
+      emitTo(p, "partner_left");
     }
     queue = queue.filter((id) => id !== socket.id);
 
     socket.emit("stopped");
   });
 
-  // MESSAGE
+  // ===== MESSAGE =====
   socket.on("message", (msg) => {
     if (!requireAgree()) return;
     if (typeof msg !== "string") return;
@@ -133,143 +145,102 @@ io.on("connection", (socket) => {
     if (!text) return;
 
     const p = partners.get(socket.id);
-    if (p) io.to(p).emit("message", text);
+    if (p) emitTo(p, "message", text);
   });
 
-  // REPORT -> ban partner (memory)
-socket.on("report", () => {
-  if (!requireAgree()) return;
-
-  const p = partners.get(socket.id);
-  if (!p) return;
-
-  const partnerIdent = identBySocket.get(p);
-  if (!partnerIdent) return;
-
-  const count = (reportCounts.get(partnerIdent) || 0) + 1;
-  reportCounts.set(partnerIdent, count);
-
-  if (count >= 10) {
-    const until = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-    tempBans.set(partnerIdent, until);
-    reportCounts.delete(partnerIdent);
-
-    unpair(socket.id);
-    io.to(p).emit("reported_and_banned");
-    socket.emit("report_received");
-
-    try { io.sockets.sockets.get(p)?.disconnect(true); } catch {}
-  }
-});
-
-// PHOTO
-const pendingPhotos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
-
-socket.on("photo_offer", (dataUrl) => {
-  if (!requireAgree()) return;
-
-  const receiverId = partners.get(socket.id);
-  if (!receiverId) return;
-
-  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
-
-  pendingPhotos.set(receiverId, { fromSocketId: socket.id, dataUrl });
-  io.to(receiverId).emit("photo_request");
-  io.to(socket.id).emit("photo_sent");
-});
-
-socket.on("photo_accept", () => {
-  if (!requireAgree()) return;
-
-  const req = pendingPhotos.get(socket.id);
-  if (!req) return;
-
-  pendingPhotos.delete(socket.id);
-
-  // deliver to receiver (this socket)
-  io.to(socket.id).emit("photo_deliver", { dataUrl: req.dataUrl });
-
-  // (optional) notify sender that it was accepted
-  io.to(req.fromSocketId).emit("message", "✅ Photo accepted");
-});
-
-socket.on("photo_decline", () => {
-  if (!requireAgree()) return;
-
-  const req = pendingPhotos.get(socket.id);
-  if (!req) return;
-
-  pendingPhotos.delete(socket.id);
-
-  // (optional) notify sender that it was declined
-  io.to(req.fromSocketId).emit("message", "❌ Photo declined");
-});
-
-// PHOTO
-const pendingPhotos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
-
-socket.on("photo_offer", (dataUrl) => {
-  if (!requireAgree()) return;
-
-  const receiverId = partners.get(socket.id);
-  if (!receiverId) return;
-
-  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
-
-  pendingPhotos.set(receiverId, { fromSocketId: socket.id, dataUrl });
-  io.to(receiverId).emit("photo_request");
-  io.to(socket.id).emit("photo_sent");
-});
-
-socket.on("photo_accept", () => {
-  if (!requireAgree()) return;
-
-  const req = pendingPhotos.get(socket.id);
-  if (!req) return;
-
-  pendingPhotos.delete(socket.id);
-
-  // deliver to receiver (this socket)
-  io.to(socket.id).emit("photo_deliver", { dataUrl: req.dataUrl });
-
-  // (optional) notify sender that it was accepted
-  io.to(req.fromSocketId).emit("message", "✅ Photo accepted");
-});
-
-socket.on("photo_decline", () => {
-  if (!requireAgree()) return;
-
-  const req = pendingPhotos.get(socket.id);
-  if (!req) return;
-
-  pendingPhotos.delete(socket.id);
-
-  // (optional) notify sender that it was declined
-  io.to(req.fromSocketId).emit("message", "❌ Photo declined");
-});
-
-
-socket.on("video_decline", () => {
-  if (!requireAgree()) return;
-
-  const req = pendingVideos.get(socket.id);
-  if (!req) return;
-
-  pendingVideos.delete(socket.id);
-  socket.emit("stopped");
-});
-
-  // VIDEO
-  socket.on("video_offer", (dataUrl) => {
+  // ===== REPORT (ban after 10 unique reports) =====
+  socket.on("report", () => {
     if (!requireAgree()) return;
 
     const p = partners.get(socket.id);
     if (!p) return;
 
+    const targetIdent = identBySocket.get(p);
+    const reporterIdent = identBySocket.get(socket.id);
+    if (!targetIdent || !reporterIdent) return;
+
+    // add vote
+    let voters = reportVotes.get(targetIdent);
+    if (!voters) {
+      voters = new Set();
+      reportVotes.set(targetIdent, voters);
+    }
+    voters.add(reporterIdent);
+
+    socket.emit("report_received");
+
+    // optional: stop current chat for safety
+    if (p) {
+      unpair(socket.id);
+      emitTo(p, "partner_left");
+      socket.emit("partner_left");
+    }
+
+    // threshold reached
+    if (voters.size >= REPORT_THRESHOLD) {
+      reportVotes.delete(targetIdent);
+
+      tempBans.set(targetIdent, Date.now() + BAN_MS);
+
+      // notify + disconnect target if online
+      emitTo(p, "reported_and_banned");
+      const targetSocket = io.sockets.sockets.get(p);
+      if (targetSocket) {
+        targetSocket.disconnect(true);
+      }
+    }
+  });
+
+  // ===== PHOTO FLOW =====
+  socket.on("photo_offer", (dataUrl) => {
+    if (!requireAgree()) return;
+
+    const receiverId = partners.get(socket.id);
+    if (!receiverId) return;
+
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
+
+    pendingPhotos.set(receiverId, { fromSocketId: socket.id, dataUrl });
+    emitTo(receiverId, "photo_request");
+    socket.emit("photo_sent");
+  });
+
+  socket.on("photo_accept", () => {
+    if (!requireAgree()) return;
+
+    const req = pendingPhotos.get(socket.id);
+    if (!req) return;
+
+    pendingPhotos.delete(socket.id);
+
+    // deliver to receiver
+    socket.emit("photo_deliver", { dataUrl: req.dataUrl });
+
+    // notify sender (optional)
+    emitTo(req.fromSocketId, "message", "✅ Photo accepted");
+  });
+
+  socket.on("photo_decline", () => {
+    if (!requireAgree()) return;
+
+    const req = pendingPhotos.get(socket.id);
+    if (!req) return;
+
+    pendingPhotos.delete(socket.id);
+    emitTo(req.fromSocketId, "message", "❌ Photo declined");
+  });
+
+  // ===== VIDEO FLOW =====
+  socket.on("video_offer", (dataUrl) => {
+    if (!requireAgree()) return;
+
+    const receiverId = partners.get(socket.id);
+    if (!receiverId) return;
+
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:video/")) return;
 
-    pendingVideos.set(p, { fromSocketId: socket.id, dataUrl });
-    io.to(p).emit("video_request");
+    pendingVideos.set(receiverId, { fromSocketId: socket.id, dataUrl });
+    emitTo(receiverId, "video_request");
     socket.emit("video_sent");
   });
 
@@ -279,20 +250,28 @@ socket.on("video_decline", () => {
     const req = pendingVideos.get(socket.id);
     if (!req) return;
 
-    io.to(socket.id).emit("video_receive", req.dataUrl);
     pendingVideos.delete(socket.id);
+
+    socket.emit("video_deliver", { dataUrl: req.dataUrl });
+    emitTo(req.fromSocketId, "message", "✅ Video accepted");
   });
 
   socket.on("video_decline", () => {
     if (!requireAgree()) return;
+
+    const req = pendingVideos.get(socket.id);
+    if (!req) return;
+
     pendingVideos.delete(socket.id);
+    emitTo(req.fromSocketId, "message", "❌ Video declined");
   });
 
+  // ===== DISCONNECT CLEANUP =====
   socket.on("disconnect", () => {
     const p = partners.get(socket.id);
     if (p) {
       unpair(socket.id);
-      io.to(p).emit("partner_left");
+      emitTo(p, "partner_left");
     }
     queue = queue.filter((id) => id !== socket.id);
 
@@ -300,6 +279,7 @@ socket.on("video_decline", () => {
     pendingVideos.delete(socket.id);
 
     identBySocket.delete(socket.id);
+
     console.log("DISCONNECTED", socket.id);
   });
 });
