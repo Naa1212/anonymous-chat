@@ -178,7 +178,6 @@
 
   // Controls
   function find() { chat.innerHTML=""; add("Searching…"); socket.emit("find"); }
-  function next() { chat.innerHTML=""; socket.emit("next"); }
   function stop() { socket.emit("stop"); add("Stopped"); }
   function report() { socket.emit("report"); add("✅ Report sent."); }
 
