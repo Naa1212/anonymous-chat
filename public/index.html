@@ -301,10 +301,7 @@
     #msg{ width: 100%; min-width: 0; }
     button{ width: 100%; }
   }
-<style>
-/* --- ADD THIS AT THE VERY END OF YOUR EXISTING <style> --- */
 
-/* Make Start/Photo/Video visible even if they are not <button> */
 #btnStart, #btnPhoto, #btnVideo,
 button#start, button#photo, button#video,
 button[id*="Start"], button[id*="Photo"], button[id*="Video"],
@@ -336,7 +333,7 @@ a#btnStart, a[id*="Start"]{
   box-shadow: 0 10px 30px rgba(122,167,255,.10);
 }
 
-/* Photo/Video slightly neutral (or tweak if you want) */
+
 #btnPhoto, #btnVideo,
 button[id*="Photo"], button[id*="Video"],
 a[id*="Photo"], a[id*="Video"],
@@ -345,7 +342,6 @@ label[for*="photo"], label[for*="video"], label[for*="Photo"], label[for*="Video
   border-color: rgba(255,255,255,.16);
 }
 
-/* If your file inputs exist, hide the input but keep label button visible */
 input[type="file"]{
   position: absolute !important;
   left: -9999px !important;
@@ -354,7 +350,6 @@ input[type="file"]{
   opacity: 0 !important;
 }
 </style>
-
 
 </head>
 
