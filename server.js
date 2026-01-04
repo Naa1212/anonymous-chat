@@ -167,7 +167,7 @@ socket.on("report", () => {
 
    
     try { io.sockets.sockets.get(p)?.disconnect(true); } catch {}
-  });
+  
 
   // PHOTO
   socket.on("photo_offer", (dataUrl) => {
