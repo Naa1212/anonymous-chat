@@ -162,34 +162,79 @@ socket.on("report", () => {
   }
 });
 
-  // PHOTO
-  socket.on("photo_offer", (dataUrl) => {
-    if (!requireAgree()) return;
+  // === REPLACE YOUR PHOTO + VIDEO SOCKET HANDLERS IN server.js WITH THIS BLOCK ===
 
-    const p = partners.get(socket.id);
-    if (!p) return;
+// PHOTO
+const pendingPhotos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
 
-    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
+socket.on("photo_offer", (dataUrl) => {
+  if (!requireAgree()) return;
 
-    pendingPhotos.set(p, { fromSocketId: socket.id, dataUrl });
-    io.to(p).emit("photo_request");
-    socket.emit("photo_sent");
-  });
+  const p = partners.get(socket.id);
+  if (!p) return;
 
-  socket.on("photo_accept", () => {
-    if (!requireAgree()) return;
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
 
-    const req = pendingPhotos.get(socket.id);
-    if (!req) return;
+  pendingPhotos.set(p, { fromSocketId: socket.id, dataUrl });
+  io.to(p).emit("photo_request");
+  socket.emit("photo_sent");
+});
 
-    io.to(socket.id).emit("photo_receive", req.dataUrl);
-    pendingPhotos.delete(socket.id);
-  });
+socket.on("photo_accept", () => {
+  if (!requireAgree()) return;
 
-  socket.on("photo_decline", () => {
-    if (!requireAgree()) return;
-    pendingPhotos.delete(socket.id);
-  });
+  const req = pendingPhotos.get(socket.id);
+  if (!req) return;
+
+  pendingPhotos.delete(socket.id);
+  socket.emit("photo_deliver", req.dataUrl);
+});
+
+socket.on("photo_decline", () => {
+  if (!requireAgree()) return;
+
+  const req = pendingPhotos.get(socket.id);
+  if (!req) return;
+
+  pendingPhotos.delete(socket.id);
+  socket.emit("stopped");
+});
+
+// VIDEO
+const pendingVideos = new Map(); // key: receiverSocketId -> { fromSocketId, dataUrl }
+
+socket.on("video_offer", (dataUrl) => {
+  if (!requireAgree()) return;
+
+  const p = partners.get(socket.id);
+  if (!p) return;
+
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:video/")) return;
+
+  pendingVideos.set(p, { fromSocketId: socket.id, dataUrl });
+  io.to(p).emit("video_request");
+  socket.emit("video_sent");
+});
+
+socket.on("video_accept", () => {
+  if (!requireAgree()) return;
+
+  const req = pendingVideos.get(socket.id);
+  if (!req) return;
+
+  pendingVideos.delete(socket.id);
+  socket.emit("video_deliver", req.dataUrl);
+});
+
+socket.on("video_decline", () => {
+  if (!requireAgree()) return;
+
+  const req = pendingVideos.get(socket.id);
+  if (!req) return;
+
+  pendingVideos.delete(socket.id);
+  socket.emit("stopped");
+});
 
   // VIDEO
   socket.on("video_offer", (dataUrl) => {
