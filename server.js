@@ -136,10 +136,7 @@ io.on("connection", (socket) => {
     if (p) io.to(p).emit("message", text);
   });
 
-  // REPORT -> count reports, temporary ban (24h if >=10)
-const reportCounts = new Map(); // ident -> count
-const tempBans = new Map();     // ident -> timestamp (until)
-
+  // REPORT -> ban partner (memory)
 socket.on("report", () => {
   if (!requireAgree()) return;
 
@@ -149,25 +146,21 @@ socket.on("report", () => {
   const partnerIdent = identBySocket.get(p);
   if (!partnerIdent) return;
 
-  // increase report count
   const count = (reportCounts.get(partnerIdent) || 0) + 1;
   reportCounts.set(partnerIdent, count);
 
-  socket.emit("report_received");
-
-  // if reached threshold → ban for 24h
   if (count >= 10) {
     const until = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     tempBans.set(partnerIdent, until);
-
     reportCounts.delete(partnerIdent);
 
     unpair(socket.id);
     io.to(p).emit("reported_and_banned");
+    socket.emit("report_received");
 
-   
     try { io.sockets.sockets.get(p)?.disconnect(true); } catch {}
-  
+  }
+});
 
   // PHOTO
   socket.on("photo_offer", (dataUrl) => {
