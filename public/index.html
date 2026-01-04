@@ -8,15 +8,10 @@
     :root{
       --bg0:#0b0f14;
       --bg1:#0f1721;
-      --card:#0f1a22;
-      --card2:#111f2a;
       --stroke:rgba(255,255,255,.10);
       --stroke2:rgba(255,255,255,.14);
       --text:rgba(245,248,255,.92);
       --muted:rgba(235,245,255,.65);
-
-      --btn:#ffffff12;
-      --btn2:#ffffff18;
 
       --find-bg: rgba(120, 180, 255, 0.16);
       --find-bd: rgba(120, 180, 255, 0.34);
@@ -37,8 +32,12 @@
 
     *{box-sizing:border-box}
     html,body{height:100%}
+
+    /* IMPORTANT: prevent page from growing; only chat scrolls */
     body{
       margin:0;
+      height:100vh;
+      overflow:hidden;
       color:var(--text);
       background:
         radial-gradient(1200px 900px at 30% 15%, rgba(120,180,255,.10), transparent 60%),
@@ -46,11 +45,10 @@
         radial-gradient(900px 700px at 50% 90%, rgba(255,210,120,.08), transparent 55%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-      overflow-x:hidden;
     }
 
     .shell{
-      min-height:100%;
+      height:100vh;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -59,15 +57,20 @@
 
     .card{
       width:min(980px, 100%);
+      height:min(720px, calc(100vh - 44px)); /* fixed frame height */
       border:1px solid var(--stroke);
       background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
       border-radius:22px;
       box-shadow: 0 18px 60px rgba(0,0,0,.55);
       backdrop-filter: blur(10px);
       overflow:hidden;
+      display:flex;
+      flex-direction:column; /* keep layout locked */
+      min-height:520px;
     }
 
     .topbar{
+      flex:0 0 auto;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -76,11 +79,7 @@
       border-bottom:1px solid var(--stroke);
     }
 
-    .brand{
-      display:flex;
-      align-items:baseline;
-      gap:10px;
-    }
+    .brand{display:flex;align-items:baseline;gap:10px;}
     .brand .dot{
       width:10px;height:10px;border-radius:50%;
       background:rgba(120,180,255,.9);
@@ -102,36 +101,32 @@
       font-weight:600;
     }
 
-    .status{
-      font-size:12px;
-      color:var(--muted);
-      letter-spacing:.2px;
-      font-weight:700;
-      opacity:.0;
-      user-select:none;
-    }
+    .status{opacity:0;user-select:none}
 
     .main{
+      flex:1 1 auto;
       display:flex;
       gap:14px;
       padding:14px;
+      min-height:0; /* allow inner scroll */
     }
 
     .chat-wrap{
-      flex:1;
+      flex:1 1 auto;
       border:1px solid var(--stroke);
       border-radius:18px;
       background:linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,.18));
       overflow:hidden;
       display:flex;
       flex-direction:column;
-      min-height:560px;
+      min-height:0; /* critical: enables internal scrolling */
     }
 
     .chat{
-      flex:1;
+      flex:1 1 auto;
       padding:16px 16px 12px 16px;
-      overflow:auto;
+      overflow:auto;      /* chat scrolls like WhatsApp */
+      min-height:0;       /* critical */
       scroll-behavior:smooth;
     }
 
@@ -158,43 +153,24 @@
       word-wrap:break-word;
       white-space:pre-wrap;
     }
-    .msg.me{
-      margin-left:auto;
-      background:rgba(120,180,255,.10);
-      border-color:rgba(120,180,255,.22);
-    }
-    .msg.other{
-      margin-right:auto;
-      background:rgba(255,255,255,.06);
-      border-color:rgba(255,255,255,.12);
-    }
-    .msg.media{
-      padding:10px;
-    }
-    .msg.media img{
-      display:block;
-      max-width:100%;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-    }
-    .msg.media video{
-      display:block;
-      width:100%;
-      max-height:320px;
+    .msg.me{margin-left:auto;background:rgba(120,180,255,.10);border-color:rgba(120,180,255,.22);}
+    .msg.other{margin-right:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);}
+    .msg.media{padding:10px;}
+    .msg.media img,.msg.media video{
+      display:block;max-width:100%;
       border-radius:12px;
       border:1px solid rgba(255,255,255,.10);
       background:black;
     }
+    .msg.media video{width:100%;max-height:320px;}
     .meta{
-      display:block;
-      margin-top:6px;
-      font-size:12px;
-      color:rgba(235,245,255,.66);
-      font-weight:700;
-      letter-spacing:.1px;
+      display:block;margin-top:6px;
+      font-size:12px;color:rgba(235,245,255,.66);
+      font-weight:700;letter-spacing:.1px;
     }
 
     .composer{
+      flex:0 0 auto;
       border-top:1px solid var(--stroke);
       background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
       padding:12px;
@@ -214,7 +190,7 @@
       font-size:14px;
       min-width:0;
     }
-    #msg::placeholder{color:rgba(235,245,255,.50); font-weight:600}
+    #msg::placeholder{color:rgba(235,245,255,.50);font-weight:600}
 
     .btnrow{
       display:flex;
@@ -224,7 +200,7 @@
       align-items:center;
     }
 
-    button, .btn{
+    button{
       appearance:none;
       border:1px solid var(--stroke2);
       background:rgba(255,255,255,.08);
@@ -247,28 +223,13 @@
     button:active{ transform: translateY(1px) scale(.98); }
     button:disabled{ opacity:.45; cursor:not-allowed; filter:grayscale(40%); }
 
-    #btnStart, #btnFind{
-      background:var(--find-bg);
-      border-color:var(--find-bd);
-      color:var(--find-tx);
-    }
-    #btnPhoto, #btnVideo{
-      background:var(--media-bg);
-      border-color:var(--media-bd);
-      color:var(--media-tx);
-    }
-    #btnStop{
-      background:var(--stop-bg);
-      border-color:var(--stop-bd);
-      color:var(--stop-tx);
-    }
-    #btnReport{
-      background:var(--report-bg);
-      border-color:var(--report-bd);
-      color:var(--report-tx);
-    }
+    #btnFind{background:var(--find-bg);border-color:var(--find-bd);color:var(--find-tx);}
+    #btnPhoto,#btnVideo{background:var(--media-bg);border-color:var(--media-bd);color:var(--media-tx);}
+    #btnStop{background:var(--stop-bg);border-color:var(--stop-bd);color:var(--stop-tx);}
+    #btnReport{background:var(--report-bg);border-color:var(--report-bd);color:var(--report-tx);}
 
     .footer{
+      flex:0 0 auto;
       padding:10px 16px 14px;
       border-top:1px solid var(--stroke);
       color:rgba(235,245,255,.62);
@@ -280,14 +241,7 @@
     .footer strong{color:rgba(245,248,255,.88)}
     .footer a{color:rgba(180,210,255,.85); text-decoration:none; font-weight:800}
     .footer a:hover{text-decoration:underline}
-
-    .media-note{
-      margin-top:6px;
-      font-size:12px;
-      color:rgba(235,245,255,.70);
-      font-weight:700;
-      letter-spacing:.1px;
-    }
+    .media-note{margin-top:6px;font-size:12px;color:rgba(235,245,255,.70);font-weight:700;letter-spacing:.1px;}
 
     /* Gate (18+) */
     #gate{
@@ -317,11 +271,7 @@
       justify-content:space-between;
       gap:12px;
     }
-    .gate-top .ttl{
-      font-size:16px;
-      font-weight:1000;
-      letter-spacing:.2px;
-    }
+    .gate-top .ttl{font-size:16px;font-weight:1000;letter-spacing:.2px;}
     .gate-body{
       padding:16px 18px 10px;
       color:rgba(245,248,255,.88);
@@ -334,12 +284,7 @@
       color:rgba(235,245,255,.78);
       font-weight:700;
     }
-    .gate-note{
-      margin-top:12px;
-      color:rgba(235,245,255,.72);
-      font-size:12px;
-      font-weight:800;
-    }
+    .gate-note{margin-top:12px;color:rgba(235,245,255,.72);font-size:12px;font-weight:800;}
     .gate-actions{
       display:flex;
       gap:10px;
@@ -389,11 +334,7 @@
       justify-content:space-between;
       gap:12px;
     }
-    .incoming-top .ttl{
-      font-size:14px;
-      font-weight:1000;
-      letter-spacing:.2px;
-    }
+    .incoming-top .ttl{font-size:14px;font-weight:1000;letter-spacing:.2px;}
     .incoming-body{
       padding:14px 18px 10px;
       color:rgba(245,248,255,.88);
@@ -407,11 +348,7 @@
       overflow:hidden;
       background:rgba(255,255,255,.04);
     }
-    .incoming-preview img, .incoming-preview video{
-      width:100%;
-      display:block;
-      background:black;
-    }
+    .incoming-preview img,.incoming-preview video{width:100%;display:block;background:black;}
     .incoming-actions{
       display:flex;
       gap:10px;
@@ -434,8 +371,8 @@
     }
 
     @media (max-width: 720px){
-      .main{padding:10px}
-      .chat-wrap{min-height:66vh}
+      .shell{padding:14px 10px}
+      .card{height:calc(100vh - 28px)}
       .composer{flex-direction:column; align-items:stretch}
       .btnrow{justify-content:stretch}
       button{width:100%}
@@ -511,7 +448,6 @@
           <div class="composer">
             <input id="msg" type="text" autocomplete="off" placeholder="Type a message…" />
             <div class="btnrow">
-              <button id="btnStart" type="button">Start</button>
               <button id="btnFind" type="button">Find</button>
               <button id="btnPhoto" type="button">Photo</button>
               <button id="btnVideo" type="button">Video</button>
@@ -539,14 +475,12 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const chat = document.getElementById("chat");
-    const sys = document.getElementById("sys");
     const input = document.getElementById("msg");
 
     const btnAgree = document.getElementById("btnAgree");
     const btnDecline = document.getElementById("btnDecline");
     const gate = document.getElementById("gate");
 
-    const btnStart = document.getElementById("btnStart");
     const btnFind  = document.getElementById("btnFind");
     const btnStop  = document.getElementById("btnStop");
     const btnReport= document.getElementById("btnReport");
@@ -567,13 +501,6 @@
 
     let agreed = false;
     let pendingType = null;
-    let pendingPayload = null;
-
-    function escapeHTML(s){
-      return String(s).replace(/[&<>"']/g, (c)=>({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-      }[c]));
-    }
 
     function scrollBottom(){
       chat.scrollTop = chat.scrollHeight;
@@ -622,7 +549,6 @@
 
     function setControlsEnabled(on){
       input.disabled = !on;
-      btnStart.disabled = !on;
       btnFind.disabled = !on;
       btnStop.disabled = !on;
       btnReport.disabled = !on;
@@ -673,7 +599,6 @@
       addSystem("Report sent.");
     }
 
-    btnStart.addEventListener("click", find);
     btnFind.addEventListener("click", find);
     btnStop.addEventListener("click", stop);
     btnReport.addEventListener("click", report);
@@ -766,8 +691,6 @@
 
     function openIncoming(type, payload){
       pendingType = type;
-      pendingPayload = payload || null;
-
       incomingTitle.textContent = type === "photo" ? "Incoming photo" : "Incoming video";
       incomingText.textContent = "Your partner wants to send you " + (type === "photo" ? "a photo" : "a video") + ". Accept to receive it, or choose This line.";
       incomingPreview.style.display = "none";
@@ -794,7 +717,6 @@
     function closeIncoming(){
       incoming.style.display = "none";
       pendingType = null;
-      pendingPayload = null;
       incomingPreview.innerHTML = "";
     }
 
@@ -814,10 +736,6 @@
       addSystem("Declined.");
     });
 
-    socket.on("connect", () => {
-      // no-op
-    });
-
     socket.on("banned", () => {
       gate.style.display = "flex";
       setControlsEnabled(false);
@@ -831,9 +749,7 @@
     socket.on("report_received", () => addSystem("Report received."));
     socket.on("reported_and_banned", () => addSystem("You were reported and removed."));
 
-    socket.on("message", (m) => {
-      addMessage(String(m || ""), "other");
-    });
+    socket.on("message", (m) => addMessage(String(m || ""), "other"));
 
     socket.on("photo_sent", () => addSystem("Photo offer sent."));
     socket.on("video_sent", () => addSystem("Video offer sent."));
@@ -849,3 +765,4 @@
   </script>
 </body>
 </html>
+
